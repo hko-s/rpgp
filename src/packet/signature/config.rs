@@ -232,7 +232,8 @@ impl SignatureConfig {
         P: PublicKeyTrait + Serialize,
     {
         ensure!(
-            (self.version() == SignatureVersion::V4 && signer.version() == KeyVersion::V4)
+            (self.version() == SignatureVersion::V3 && signer.version() == KeyVersion::V3)
+                || (self.version() == SignatureVersion::V4 && signer.version() == KeyVersion::V4)
                 || (self.version() == SignatureVersion::V6 && signer.version() == KeyVersion::V6),
             "signature version {:?} not allowed for signer key version {:?}",
             self.version(),
@@ -309,7 +310,9 @@ impl SignatureConfig {
         L: PublicKeyTrait + Serialize,
     {
         ensure!(
-            (self.version() == SignatureVersion::V4 && signing_key.version() == KeyVersion::V4)
+            (self.version() == SignatureVersion::V3 && signing_key.version() == KeyVersion::V3)
+                || (self.version() == SignatureVersion::V4
+                    && signing_key.version() == KeyVersion::V4)
                 || (self.version() == SignatureVersion::V6
                     && signing_key.version() == KeyVersion::V6),
             "signature version {:?} not allowed for signer key version {:?}",
@@ -350,7 +353,9 @@ impl SignatureConfig {
         P: PublicKeyTrait + Serialize,
     {
         ensure!(
-            (self.version() == SignatureVersion::V4 && signing_key.version() == KeyVersion::V4)
+            (self.version() == SignatureVersion::V3 && signing_key.version() == KeyVersion::V3)
+                || (self.version() == SignatureVersion::V4
+                    && signing_key.version() == KeyVersion::V4)
                 || (self.version() == SignatureVersion::V6
                     && signing_key.version() == KeyVersion::V6),
             "signature version {:?} not allowed for signer key version {:?}",
@@ -657,7 +662,8 @@ impl SignatureHasher {
         let mut hasher = norm_hasher.done();
 
         ensure!(
-            (config.version() == SignatureVersion::V4 && key.version() == KeyVersion::V4)
+            (config.version() == SignatureVersion::V3 && key.version() == KeyVersion::V3)
+                || (config.version() == SignatureVersion::V4 && key.version() == KeyVersion::V4)
                 || (config.version() == SignatureVersion::V6 && key.version() == KeyVersion::V6),
             "signature version {:?} not allowed for signer key version {:?}",
             config.version(),
