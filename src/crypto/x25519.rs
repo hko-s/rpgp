@@ -2,7 +2,7 @@ use std::cmp::PartialEq;
 
 use hkdf::Hkdf;
 use log::debug;
-use rand::{RngCore, CryptoRng};
+use rand::{CryptoRng, RngCore};
 use sha2::Sha256;
 use x25519_dalek::{PublicKey, StaticSecret};
 use zeroize::{ZeroizeOnDrop, Zeroizing};
