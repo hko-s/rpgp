@@ -242,7 +242,56 @@ mod tests {
                     "9745167",  // MPI_NULL
                     "9797527",  // MPI_NULL
                     "19045846", // invalid packet length
-                    "19047047",
+                    "19047047", // ?
+                    "1344258",  // unsupported DSA key length
+                    "1492280",  // unsupported DSA key length
+                    "2560236",  // unsupported DSA key length
+                    "2836107",  // unsupported DSA key length
+                    "3509480",  // unsupported DSA key length
+                    "4268413",  // unsupported DSA key length
+                    "5472920",  // unsupported DSA key length
+                    "6078338",  // unsupported DSA key length
+                    "7223769",  // unsupported DSA key length
+                    "8504570",  // unsupported DSA key length
+                    "8829527",  // unsupported DSA key length
+                    "10529734", // unsupported DSA key length
+                    "10627044", // unsupported DSA key length
+                    "11199708", // unsupported DSA key length
+                    "12621449", // unsupported DSA key length
+                    "14700768", // unsupported DSA key length
+                    "14726559", // unsupported DSA key length
+                    "17180450", // unsupported DSA key length
+                    "19033267", // unsupported DSA key length
+                    "20265287", // unsupported DSA key length
+                    "20550426", // unsupported DSA key length
+                    "21710697", // unsupported DSA key length
+                    "21711417", // unsupported DSA key length
+                    "22037359", // unsupported DSA key length
+                    "22292077", // unsupported DSA key length
+                    "23860239", // unsupported DSA key length
+                    "23928847", // unsupported DSA key length
+                    "25448631", // unsupported DSA key length
+                    "26564146", // unsupported DSA key length
+                    "26726008", // unsupported DSA key length
+                    "26818465", // unsupported DSA key length
+                    "27079319", // unsupported DSA key length
+                    "29045862", // unsupported DSA key length
+                    "31830569", // unsupported DSA key length
+                    "31968557", // unsupported DSA key length
+                    "32098295", // unsupported DSA key length
+                    "32182662", // unsupported DSA key length
+                    "33335774", // unsupported DSA key length
+                    "34201183", // unsupported DSA key length
+                    "36232576", // unsupported DSA key length
+                    "36391118", // unsupported DSA key length
+                    "37251938", // unsupported DSA key length
+                    "38397274", // unsupported DSA key length
+                    "39403042", // unsupported DSA key length
+                    "39424208", // unsupported DSA key length
+                    "42458088", // unsupported DSA key length
+                    "42724937", // unsupported DSA key length
+                    "42937682", // unsupported DSA key length
+                    "44353859", // unsupported DSA key length
                 ];
                 if list.contains(&offset.as_str()) {
                     warn!("skipping {offset}");
