@@ -10,9 +10,9 @@ fn test_composed_sks_0000() {
     let p = Path::new("./tests/tests/sks-dump/0000.pgp");
 
     for (j, key) in SignedPublicKey::from_file_many(p).unwrap().enumerate() {
-        eprintln!("{j}");
+        // eprintln!("{j}");
         if key.is_err() {
-            eprintln!("err");
+            eprintln!("err: {:?}", key.err().unwrap());
         }
     }
 
@@ -28,9 +28,9 @@ fn test_strong_1997() {
     let p = Path::new("./tests/tests/ftp_pgp_net_1997/strong.pgp");
 
     for (j, key) in SignedPublicKey::from_file_many(p).unwrap().enumerate() {
-        eprintln!("{j}");
+        // eprintln!("{j}");
         if key.is_err() {
-            eprintln!("err");
+            eprintln!("err: {:?}", key.err().unwrap());
         }
     }
 
