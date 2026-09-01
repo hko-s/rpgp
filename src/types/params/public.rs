@@ -260,12 +260,12 @@ impl PublicParams {
                 Ok(PublicParams::MlDsa87NistP521(params))
             }
             PublicKeyAlgorithm::DiffieHellman
-            // | PublicKeyAlgorithm::Private100
-            // | PublicKeyAlgorithm::Private101
+            | PublicKeyAlgorithm::Private100
+            | PublicKeyAlgorithm::Private101
             | PublicKeyAlgorithm::Private102
             | PublicKeyAlgorithm::Private103
-            // | PublicKeyAlgorithm::Private104
-            // | PublicKeyAlgorithm::Private105
+            | PublicKeyAlgorithm::Private104
+            | PublicKeyAlgorithm::Private105
             | PublicKeyAlgorithm::Private106
             | PublicKeyAlgorithm::Private107
             | PublicKeyAlgorithm::Private108

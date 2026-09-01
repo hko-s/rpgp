@@ -63,30 +63,30 @@ pub enum PublicKeyAlgorithm {
 
     /// ML-KEM-768+ECDH-NIST-P-384
     #[cfg(feature = "pqc-nist-bp")]
-    MlKem768NistP384 = 100,
+    MlKem768NistP384 = 37,
     /// ML-KEM-1024+ECDH-NIST-P-521
     #[cfg(feature = "pqc-nist-bp")]
-    MlKem1024NistP521 = 101,
+    MlKem1024NistP521 = 38,
     /// ML-DSA-65+ECDSA-NIST-P-384
     #[cfg(feature = "pqc-nist-bp")]
-    MlDsa65NistP384 = 104,
+    MlDsa65NistP384 = 41,
     /// ML-DSA-87+ECDSA-NIST-P-521
     #[cfg(feature = "pqc-nist-bp")]
-    MlDsa87NistP521 = 105,
+    MlDsa87NistP521 = 42,
 
     /// Private experimental range (from OpenPGP)
-    // #[cfg_attr(test, proptest(skip))]
-    // Private100 = 100,
-    // #[cfg_attr(test, proptest(skip))]
-    // Private101 = 101,
+    #[cfg_attr(test, proptest(skip))]
+    Private100 = 100,
+    #[cfg_attr(test, proptest(skip))]
+    Private101 = 101,
     #[cfg_attr(test, proptest(skip))]
     Private102 = 102,
     #[cfg_attr(test, proptest(skip))]
     Private103 = 103,
-    // #[cfg_attr(test, proptest(skip))]
-    // Private104 = 104,
-    // #[cfg_attr(test, proptest(skip))]
-    // Private105 = 105,
+    #[cfg_attr(test, proptest(skip))]
+    Private104 = 104,
+    #[cfg_attr(test, proptest(skip))]
+    Private105 = 105,
     #[cfg_attr(test, proptest(skip))]
     Private106 = 106,
     #[cfg_attr(test, proptest(skip))]
