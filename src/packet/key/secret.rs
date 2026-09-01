@@ -299,17 +299,11 @@ impl SecretSubkey {
     }
 }
 
-impl<RNG: CryptoRng + RngCore> SigningKey<RNG> for SecretKey {
-    fn sign(
-        &self,
-        rng: &mut RNG,
-        key_pw: &Password,
-        hash: HashAlgorithm,
-        data: &[u8],
-    ) -> Result<SignatureBytes> {
+impl SigningKey for SecretKey {
+    fn sign(&self, key_pw: &Password, hash: HashAlgorithm, data: &[u8]) -> Result<SignatureBytes> {
         let mut signature: Option<SignatureBytes> = None;
         self.unlock(key_pw, |pub_params, priv_key| {
-            let sig = create_signature(rng, pub_params, priv_key, hash, data)?;
+            let sig = create_signature(pub_params, priv_key, hash, data)?;
             signature.replace(sig);
             Ok(())
         })??;
@@ -389,17 +383,11 @@ impl Imprint for SecretSubkey {
     }
 }
 
-impl<RNG: CryptoRng + RngCore> SigningKey<RNG> for SecretSubkey {
-    fn sign(
-        &self,
-        rng: &mut RNG,
-        key_pw: &Password,
-        hash: HashAlgorithm,
-        data: &[u8],
-    ) -> Result<SignatureBytes> {
+impl SigningKey for SecretSubkey {
+    fn sign(&self, key_pw: &Password, hash: HashAlgorithm, data: &[u8]) -> Result<SignatureBytes> {
         let mut signature: Option<SignatureBytes> = None;
         self.unlock(key_pw, |pub_params, priv_key| {
-            let sig = create_signature(rng, pub_params, priv_key, hash, data)?;
+            let sig = create_signature(pub_params, priv_key, hash, data)?;
             signature.replace(sig);
             Ok(())
         })??;
