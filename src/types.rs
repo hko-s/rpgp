@@ -22,8 +22,8 @@ pub use self::{
     fingerprint::Fingerprint,
     key_id::KeyId,
     key_traits::{
-        DecryptionKey, EncryptionKey, Imprint, KeyDetails, SigningKey, SigningKeyConfig,
-        VerifyingKey,
+        DecryptionKey, EncryptionKey, Imprint, KeyDetails, NonDeterminissticEcdsa, SigningKey,
+        SigningKeyConfig, VerifyingKey,
     },
     mpi::Mpi,
     packet::*,
