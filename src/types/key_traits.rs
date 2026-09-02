@@ -133,6 +133,9 @@ impl KeyDetails for Box<&dyn SigningKey> {
     }
 }
 
+/// Special purpose logic to handle non-deterministic signatures and other additional algorithm-specific parameters
+pub trait SigningKeyConfig {}
+
 /// Keys that can sign data.
 ///
 /// Contains private data.
@@ -143,6 +146,7 @@ pub trait SigningKey: KeyDetails {
         key_pw: &Password,
         hash: HashAlgorithm,
         data: &[u8],
+        extra: &mut Option<Box<dyn SigningKeyConfig>>,
     ) -> Result<crate::types::SignatureBytes>;
 
     /// The recommended hash algorithm to calculate the signature hash digest with,
@@ -156,8 +160,9 @@ impl SigningKey for Box<&dyn SigningKey> {
         key_pw: &Password,
         hash: HashAlgorithm,
         data: &[u8],
+        extra: &mut Option<Box<dyn SigningKeyConfig>>,
     ) -> Result<crate::types::SignatureBytes> {
-        (**self).sign(key_pw, hash, data)
+        (**self).sign(key_pw, hash, data, extra)
     }
 
     fn hash_alg(&self) -> HashAlgorithm {

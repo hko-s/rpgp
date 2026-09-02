@@ -1,7 +1,7 @@
 pub use dsa::KeySize;
 use dsa::{Components, Signature, SigningKey};
 use num_bigint::BigUint;
-use rand::{CryptoRng, Rng, RngCore};
+use rand::{CryptoRng, Rng};
 use signature::hazmat::PrehashVerifier;
 use zeroize::Zeroize;
 
@@ -85,12 +85,7 @@ impl Serialize for SecretKey {
 }
 
 impl Signer for SecretKey {
-    fn sign<RNG: CryptoRng + RngCore>(
-        &self,
-        _rng: &mut RNG,
-        hash_algorithm: HashAlgorithm,
-        digest: &[u8],
-    ) -> Result<SignatureBytes> {
+    fn sign(&self, hash_algorithm: HashAlgorithm, digest: &[u8]) -> Result<SignatureBytes> {
         let signing_key = &self.key;
         let signature = match hash_algorithm {
             HashAlgorithm::Md5 => signing_key.sign_prehashed_rfc6979::<md5::Md5>(digest),

@@ -16,7 +16,10 @@ use crate::{
         SubpacketData, SubpacketType,
     },
     ser::Serialize,
-    types::{Fingerprint, KeyDetails, KeyId, KeyVersion, Password, SigningKey, Tag, Timestamp},
+    types::{
+        Fingerprint, KeyDetails, KeyId, KeyVersion, Password, SigningKey, SigningKeyConfig, Tag,
+        Timestamp,
+    },
     util::NormalizingHasher,
 };
 
@@ -333,8 +336,10 @@ impl SignatureConfig {
 
         let hash = &hasher.finalize()[..];
 
+        let mut extra = None; // FIXME
+
         let signed_hash_value = [hash[0], hash[1]];
-        let signature = signer.sign(signer_pw, self.hash_alg, hash)?;
+        let signature = signer.sign(signer_pw, self.hash_alg, hash, &mut extra)?;
 
         Signature::from_config(self, signed_hash_value, signature)
     }
@@ -377,9 +382,11 @@ impl SignatureConfig {
         let len = self.hash_signature_data(&mut hasher)?;
         hasher.update(&self.trailer(len)?);
 
+        let mut extra = None; // FIXME
+
         let hash = &hasher.finalize()[..];
         let signed_hash_value = [hash[0], hash[1]];
-        let signature = signer.sign(signer_pw, self.hash_alg, hash)?;
+        let signature = signer.sign(signer_pw, self.hash_alg, hash, &mut extra)?;
 
         Signature::from_config(self, signed_hash_value, signature)
     }
@@ -423,9 +430,11 @@ impl SignatureConfig {
         let len = self.hash_signature_data(&mut hasher)?;
         hasher.update(&self.trailer(len)?);
 
+        let mut extra = None; // FIXME
+
         let hash = &hasher.finalize()[..];
         let signed_hash_value = [hash[0], hash[1]];
-        let signature = signer.sign(signer_pw, self.hash_alg, hash)?;
+        let signature = signer.sign(signer_pw, self.hash_alg, hash, &mut extra)?;
 
         Signature::from_config(self, signed_hash_value, signature)
     }
@@ -462,9 +471,11 @@ impl SignatureConfig {
         let len = self.hash_signature_data(&mut hasher)?;
         hasher.update(&self.trailer(len)?);
 
+        let mut extra = None; // FIXME
+
         let hash = &hasher.finalize()[..];
         let signed_hash_value = [hash[0], hash[1]];
-        let signature = signing_key.sign(key_pw, self.hash_alg, hash)?;
+        let signature = signing_key.sign(key_pw, self.hash_alg, hash, &mut extra)?;
 
         Signature::from_config(self, signed_hash_value, signature)
     }
@@ -785,8 +796,10 @@ impl SignatureHasher {
 
         let hash = &hasher.finalize()[..];
 
+        let mut extra = None; // FIXME
+
         let signed_hash_value = [hash[0], hash[1]];
-        let signature = key.sign(key_pw, config.hash_alg, hash)?;
+        let signature = key.sign(key_pw, config.hash_alg, hash, &mut extra)?;
 
         Signature::from_config(config, signed_hash_value, signature)
     }

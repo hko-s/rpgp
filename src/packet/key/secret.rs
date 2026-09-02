@@ -2,7 +2,7 @@ use std::io::BufRead;
 
 use generic_array::GenericArray;
 use log::debug;
-use rand::{CryptoRng, Rng, RngCore};
+use rand::{CryptoRng, Rng};
 
 use super::public::PubKeyInner;
 use crate::{
@@ -20,7 +20,7 @@ use crate::{
     types::{
         DecryptionKey, EddsaLegacyPublicParams, EskType, Fingerprint, Imprint, KeyDetails, KeyId,
         KeyVersion, Password, PkeskBytes, PlainSecretParams, PublicParams, SecretParams,
-        SignatureBytes, SigningKey, Tag, Timestamp,
+        SignatureBytes, SigningKey, SigningKeyConfig, Tag, Timestamp,
     },
 };
 
@@ -300,7 +300,13 @@ impl SecretSubkey {
 }
 
 impl SigningKey for SecretKey {
-    fn sign(&self, key_pw: &Password, hash: HashAlgorithm, data: &[u8]) -> Result<SignatureBytes> {
+    fn sign(
+        &self,
+        key_pw: &Password,
+        hash: HashAlgorithm,
+        data: &[u8],
+        extra: &mut Option<Box<dyn SigningKeyConfig>>,
+    ) -> Result<SignatureBytes> {
         let mut signature: Option<SignatureBytes> = None;
         self.unlock(key_pw, |pub_params, priv_key| {
             let sig = create_signature(pub_params, priv_key, hash, data)?;
@@ -384,7 +390,13 @@ impl Imprint for SecretSubkey {
 }
 
 impl SigningKey for SecretSubkey {
-    fn sign(&self, key_pw: &Password, hash: HashAlgorithm, data: &[u8]) -> Result<SignatureBytes> {
+    fn sign(
+        &self,
+        key_pw: &Password,
+        hash: HashAlgorithm,
+        data: &[u8],
+        extra: &mut Option<Box<dyn SigningKeyConfig>>,
+    ) -> Result<SignatureBytes> {
         let mut signature: Option<SignatureBytes> = None;
         self.unlock(key_pw, |pub_params, priv_key| {
             let sig = create_signature(pub_params, priv_key, hash, data)?;
@@ -613,8 +625,7 @@ impl DecryptionKey for SecretSubkey {
     }
 }
 
-fn create_signature<RNG: CryptoRng + RngCore>(
-    rng: &mut RNG,
+fn create_signature(
     pub_params: &PublicParams,
     priv_key: &PlainSecretParams,
     hash: HashAlgorithm,
@@ -628,19 +639,19 @@ fn create_signature<RNG: CryptoRng + RngCore>(
             let PublicParams::RSA(_) = pub_params else {
                 bail!("inconsistent key");
             };
-            priv_key.sign(rng, hash, data)
+            priv_key.sign(hash, data)
         }
         PlainSecretParams::ECDSA(ref priv_key) => {
             let PublicParams::ECDSA(_) = pub_params else {
                 bail!("inconsistent key");
             };
-            priv_key.sign(rng, hash, data)
+            priv_key.sign(hash, data)
         }
         PlainSecretParams::DSA(ref priv_key) => {
             let PublicParams::DSA(_) = pub_params else {
                 bail!("inconsistent key");
             };
-            priv_key.sign(rng, hash, data)
+            priv_key.sign(hash, data)
         }
         PlainSecretParams::ECDH(_) => {
             bail!("ECDH can not be used for signing operations")
@@ -663,33 +674,33 @@ fn create_signature<RNG: CryptoRng + RngCore>(
             let PublicParams::Ed25519(_) = pub_params else {
                 bail!("invalid inconsistent key");
             };
-            priv_key.sign(rng, hash, data)
+            priv_key.sign(hash, data)
         }
         #[cfg(feature = "pqc")]
         PlainSecretParams::MlDsa65Ed25519(ref priv_key) => {
             let PublicParams::MlDsa65Ed25519(_) = pub_params else {
                 bail!("invalid inconsistent key");
             };
-            priv_key.sign(rng, hash, data)
+            priv_key.sign(hash, data)
         }
         #[cfg(feature = "pqc")]
         PlainSecretParams::MlDsa87Ed448(ref priv_key) => {
             let PublicParams::MlDsa87Ed448(_) = pub_params else {
                 bail!("invalid inconsistent key");
             };
-            priv_key.sign(rng, hash, data)
+            priv_key.sign(hash, data)
         }
         PlainSecretParams::Ed448(ref priv_key) => {
             let PublicParams::Ed448(_) = pub_params else {
                 bail!("invalid inconsistent key");
             };
-            priv_key.sign(rng, hash, data)
+            priv_key.sign(hash, data)
         }
         PlainSecretParams::EdDSALegacy(ref priv_key) => match (priv_key, pub_params) {
             (
                 crate::crypto::eddsa_legacy::SecretKey::Ed25519(ed25519),
                 PublicParams::EdDSALegacy(EddsaLegacyPublicParams::Ed25519 { .. }),
-            ) => ed25519.sign(rng, hash, data),
+            ) => ed25519.sign(hash, data),
             (
                 crate::crypto::eddsa_legacy::SecretKey::Unsupported { .. },
                 PublicParams::EdDSALegacy(EddsaLegacyPublicParams::Unsupported { curve, .. }),
@@ -708,21 +719,21 @@ fn create_signature<RNG: CryptoRng + RngCore>(
             let PublicParams::SlhDsaShake128s(_) = pub_params else {
                 bail!("invalid inconsistent key");
             };
-            priv_key.sign(rng, hash, data)
+            priv_key.sign(hash, data)
         }
         #[cfg(feature = "pqc")]
         PlainSecretParams::SlhDsaShake128f(ref priv_key) => {
             let PublicParams::SlhDsaShake128f(_) = pub_params else {
                 bail!("invalid inconsistent key");
             };
-            priv_key.sign(rng, hash, data)
+            priv_key.sign(hash, data)
         }
         #[cfg(feature = "pqc")]
         PlainSecretParams::SlhDsaShake256s(ref priv_key) => {
             let PublicParams::SlhDsaShake256s(_) = pub_params else {
                 bail!("invalid inconsistent key");
             };
-            priv_key.sign(rng, hash, data)
+            priv_key.sign(hash, data)
         }
         PlainSecretParams::Unknown { alg, .. } => {
             unsupported_err!("{:?} signing", alg);
@@ -800,26 +811,38 @@ mod tests {
             )
             .unwrap();
 
+        let mut extra = None;
+
         // signing with a wrong password should fail
-        assert!(alice_sec.sign(&"wrong".into(), hash_algo, DATA).is_err());
+        assert!(alice_sec
+            .sign(&"wrong".into(), hash_algo, DATA, &mut extra)
+            .is_err());
 
         // signing with the right password should succeed
-        assert!(alice_sec.sign(&"password".into(), hash_algo, DATA).is_ok());
+        assert!(alice_sec
+            .sign(&"password".into(), hash_algo, DATA, &mut extra)
+            .is_ok());
 
         // remove the password protection
         alice_sec.remove_password(&"password".into()).unwrap();
 
         // signing without a password should succeed now
-        assert!(alice_sec.sign(&"".into(), hash_algo, DATA).is_ok());
+        assert!(alice_sec
+            .sign(&"".into(), hash_algo, DATA, &mut extra)
+            .is_ok());
 
         // set different password protection
         alice_sec.set_password(&mut rng, &"foo".into()).unwrap();
 
         // signing without a password should fail now
-        assert!(alice_sec.sign(&"".into(), hash_algo, DATA).is_err());
+        assert!(alice_sec
+            .sign(&"".into(), hash_algo, DATA, &mut extra)
+            .is_err());
 
         // signing with the right password should succeed
-        assert!(alice_sec.sign(&"foo".into(), hash_algo, DATA).is_ok());
+        assert!(alice_sec
+            .sign(&"foo".into(), hash_algo, DATA, &mut extra)
+            .is_ok());
 
         // remove the password protection again
         alice_sec.remove_password(&"foo".into()).unwrap();
@@ -834,7 +857,7 @@ mod tests {
 
         // signing with the right password should succeed
         alice_sec
-            .sign(&"bar".into(), hash_algo, DATA)
+            .sign(&"bar".into(), hash_algo, DATA, &mut extra)
             .expect("failed to sign");
     }
 

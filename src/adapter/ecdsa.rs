@@ -18,7 +18,7 @@ use crate::{
     packet::{PubKeyInner, PublicKey},
     types::{
         EcdsaPublicParams, Fingerprint, KeyDetails, KeyId, KeyVersion, Mpi, Password, PublicParams,
-        SignatureBytes, SigningKey, Timestamp, VerifyingKey,
+        SignatureBytes, SigningKey, SigningKeyConfig, Timestamp, VerifyingKey,
     },
 };
 
@@ -136,6 +136,7 @@ where
         _key_pw: &Password,
         hash: HashAlgorithm,
         prehashed_data: &[u8],
+        extra: &mut Option<Box<dyn SigningKeyConfig>>,
     ) -> Result<SignatureBytes> {
         let sig = self.sign_prehash(hash, prehashed_data)?;
 
