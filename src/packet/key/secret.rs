@@ -19,8 +19,8 @@ use crate::{
     ser::Serialize,
     types::{
         DecryptionKey, EddsaLegacyPublicParams, EskType, Fingerprint, Imprint, KeyDetails, KeyId,
-        KeyVersion, Password, PkeskBytes, PlainSecretParams, PublicParams, SecretParams,
-        SignatureBytes, SigningKey, SigningKeyConfig, Tag, Timestamp,
+        KeyVersion, NonDeterminissticEcdsa, Password, PkeskBytes, PlainSecretParams, PublicParams,
+        SecretParams, SignatureBytes, SigningKey, SigningKeyConfig, Tag, Timestamp,
     },
 };
 
@@ -309,7 +309,7 @@ impl SigningKey for SecretKey {
     ) -> Result<SignatureBytes> {
         let mut signature: Option<SignatureBytes> = None;
         self.unlock(key_pw, |pub_params, priv_key| {
-            let sig = create_signature(pub_params, priv_key, hash, data)?;
+            let sig = create_signature(pub_params, priv_key, hash, data, extra)?;
             signature.replace(sig);
             Ok(())
         })??;
@@ -399,7 +399,7 @@ impl SigningKey for SecretSubkey {
     ) -> Result<SignatureBytes> {
         let mut signature: Option<SignatureBytes> = None;
         self.unlock(key_pw, |pub_params, priv_key| {
-            let sig = create_signature(pub_params, priv_key, hash, data)?;
+            let sig = create_signature(pub_params, priv_key, hash, data, extra)?;
             signature.replace(sig);
             Ok(())
         })??;
@@ -630,6 +630,7 @@ fn create_signature(
     priv_key: &PlainSecretParams,
     hash: HashAlgorithm,
     data: &[u8],
+    extra: &mut Option<Box<dyn SigningKeyConfig>>,
 ) -> Result<SignatureBytes> {
     use crate::crypto::Signer;
 
@@ -645,6 +646,10 @@ fn create_signature(
             let PublicParams::ECDSA(_) = pub_params else {
                 bail!("inconsistent key");
             };
+            // let extra = match extra {
+            //     None => None,
+            //     Some(Box<NonDeterminissticEcdsa>)
+            // }
             priv_key.sign(hash, data)
         }
         PlainSecretParams::DSA(ref priv_key) => {
