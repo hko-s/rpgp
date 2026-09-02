@@ -1,4 +1,4 @@
-use rand::{CryptoRng, Rng};
+use rand::{CryptoRng, Rng, RngCore};
 
 use crate::{
     composed::PlainSessionKey,
@@ -135,6 +135,15 @@ impl KeyDetails for Box<&dyn SigningKey> {
 
 /// Special purpose logic to handle non-deterministic signatures and other additional algorithm-specific parameters
 pub trait SigningKeyConfig {}
+
+pub struct NonDeterminissticEcdsa<R>
+where
+    R: CryptoRng + RngCore,
+{
+    rng: R,
+}
+
+impl<R: CryptoRng + RngCore> SigningKeyConfig for NonDeterminissticEcdsa<R> {}
 
 /// Keys that can sign data.
 ///
