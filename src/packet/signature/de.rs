@@ -28,12 +28,22 @@ impl Signature {
     ///
     /// Ref: <https://www.rfc-editor.org/rfc/rfc9580.html#name-signature-packet-type-id-2>
     pub fn try_from_reader<B: BufRead>(packet_header: PacketHeader, mut i: B) -> Result<Self> {
+        Self::try_from_reader_inner(packet_header, &mut i, false)
+    }
+
+    /// Parse a signature while keeping track is the current signature is from an embedded subpacket.
+    /// Additional layers of embedded subpackets are rejected to avoid deep recursion.
+    fn try_from_reader_inner<B: BufRead>(
+        packet_header: PacketHeader,
+        mut i: B,
+        embedded: bool,
+    ) -> Result<Self> {
         let version = i.read_u8().map(SignatureVersion::from)?;
 
         let signature = match version {
             SignatureVersion::V2 | SignatureVersion::V3 => v3_parser(packet_header, version, i)?,
-            SignatureVersion::V4 => v4_parser(packet_header, version, i)?,
-            SignatureVersion::V6 => v6_parser(packet_header, i)?,
+            SignatureVersion::V4 => v4_parser(packet_header, version, i, embedded)?,
+            SignatureVersion::V6 => v6_parser(packet_header, i, embedded)?,
             _ => {
                 let rest = i.rest()?.freeze();
                 Signature::unknown(packet_header, version, rest)
@@ -102,11 +112,23 @@ fn v4_parser<B: BufRead>(
     packet_header: PacketHeader,
     version: SignatureVersion,
     mut i: B,
+    embedded: bool,
 ) -> Result<Signature> {
     debug_assert_eq!(version, SignatureVersion::V4);
 
     // One-octet signature type.
     let typ = i.read_u8().map(SignatureType::from)?;
+
+    if embedded {
+        // An embedded signature may only be a primary key binding
+        ensure_eq!(
+            typ,
+            SignatureType::KeyBinding,
+            "Illegal signature type {:?} in embedded signature",
+            typ
+        );
+    }
+
     // One-octet public-key algorithm.
     let pub_alg = i.read_u8().map(PublicKeyAlgorithm::from)?;
     // One-octet hash algorithm.
@@ -116,7 +138,7 @@ fn v4_parser<B: BufRead>(
     // Hashed subpacket data set (zero or more subpackets).
     let hsub_len: usize = i.read_be_u16()?.into();
     let hsub_raw = i.read_take(hsub_len);
-    let hsub = subpackets(packet_header.version(), hsub_len, hsub_raw)?;
+    let hsub = subpackets(packet_header.version(), hsub_len, hsub_raw, embedded)?;
     debug!(
         "found {} hashed subpackets in {} bytes",
         hsub.len(),
@@ -127,7 +149,7 @@ fn v4_parser<B: BufRead>(
     // Unhashed subpacket data set (zero or more subpackets).
     let usub_len: usize = i.read_be_u16()?.into();
     let usub_raw = i.read_take(usub_len);
-    let usub = subpackets(packet_header.version(), usub_len, usub_raw)?;
+    let usub = subpackets(packet_header.version(), usub_len, usub_raw, embedded)?;
     debug!(
         "found {} unhashed subpackets in {} bytes",
         usub.len(),
@@ -154,9 +176,24 @@ fn v4_parser<B: BufRead>(
 
 /// Parse a v6 signature packet
 /// Ref: https://www.rfc-editor.org/rfc/rfc9580.html#name-versions-4-and-6-signature-
-fn v6_parser<B: BufRead>(packet_header: PacketHeader, mut i: B) -> Result<Signature> {
+fn v6_parser<B: BufRead>(
+    packet_header: PacketHeader,
+    mut i: B,
+    embedded: bool,
+) -> Result<Signature> {
     // One-octet signature type.
     let typ = i.read_u8().map(SignatureType::from)?;
+
+    if embedded {
+        // An embedded signature may only be a primary key binding
+        ensure_eq!(
+            typ,
+            SignatureType::KeyBinding,
+            "Illegal signature type {:?} in embedded signature",
+            typ
+        );
+    }
+
     // One-octet public-key algorithm.
     let pub_alg = i.read_u8().map(PublicKeyAlgorithm::from)?;
     // One-octet hash algorithm.
@@ -166,7 +203,7 @@ fn v6_parser<B: BufRead>(packet_header: PacketHeader, mut i: B) -> Result<Signat
     // Hashed subpacket data set (zero or more subpackets).
     let hsub_len: usize = i.read_be_u32()?.try_into()?;
     let hsub_raw = i.read_take(hsub_len);
-    let hsub = subpackets(packet_header.version(), hsub_len, hsub_raw)?;
+    let hsub = subpackets(packet_header.version(), hsub_len, hsub_raw, embedded)?;
     debug!(
         "found {} hashed subpackets in {} bytes",
         hsub.len(),
@@ -177,7 +214,7 @@ fn v6_parser<B: BufRead>(packet_header: PacketHeader, mut i: B) -> Result<Signat
     // Unhashed subpacket data set (zero or more subpackets).
     let usub_len: usize = i.read_be_u32()?.try_into()?;
     let usub_raw = i.read_take(usub_len);
-    let usub = subpackets(packet_header.version(), usub_len, usub_raw)?;
+    let usub = subpackets(packet_header.version(), usub_len, usub_raw, embedded)?;
     debug!(
         "found {} unhashed subpackets in {} bytes",
         usub.len(),
@@ -221,6 +258,7 @@ fn subpackets<B: BufRead>(
     packet_version: PacketHeaderVersion,
     len: usize,
     mut i: B,
+    embedded: bool,
 ) -> Result<Vec<Subpacket>> {
     let mut packets = Vec::with_capacity(len.min(32));
 
@@ -234,7 +272,14 @@ fn subpackets<B: BufRead>(
         debug!("reading subpacket {typ:?}: critical? {is_critical}, len: {len}");
 
         let mut body = i.read_take(len);
-        let packet = subpacket(typ, is_critical, packet_len, packet_version, &mut body)?;
+        let packet = subpacket(
+            typ,
+            is_critical,
+            packet_len,
+            packet_version,
+            &mut body,
+            embedded,
+        )?;
         debug!("found subpacket {packet:?}");
 
         if !body.rest()?.is_empty() {
@@ -254,6 +299,7 @@ fn subpacket<B: BufRead>(
     packet_len: SubpacketLength,
     packet_version: PacketHeaderVersion,
     mut body: B,
+    embedded: bool,
 ) -> Result<Subpacket> {
     use super::subpacket::SubpacketType::*;
 
@@ -282,7 +328,10 @@ fn subpacket<B: BufRead>(
         RevocationReason => rev_reason(&mut body),
         Features => features(&mut body),
         SignatureTarget => sig_target(&mut body),
-        EmbeddedSignature => embedded_sig(packet_version, &mut body),
+        EmbeddedSignature => {
+            ensure!(!embedded, "Encountered nested embedded signature subpacket");
+            embedded_sig(packet_version, &mut body)
+        }
         IssuerFingerprint => issuer_fingerprint(&mut body),
         PreferredEncryptionModes => preferred_encryption_modes(&mut body),
         IntendedRecipientFingerprint => intended_recipient_fingerprint(&mut body),
@@ -614,7 +663,7 @@ fn embedded_sig<B: BufRead>(
         Tag::Signature,
         PacketLength::Fixed(signature_bytes.len().try_into()?),
     )?;
-    let sig = Signature::try_from_reader(header, signature_bytes.reader())?;
+    let sig = Signature::try_from_reader_inner(header, signature_bytes.reader(), true)?;
 
     Ok(SubpacketData::EmbeddedSignature(Box::new(sig)))
 }
