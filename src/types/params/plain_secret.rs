@@ -5,6 +5,7 @@ use std::{
 
 use byteorder::{BigEndian, ByteOrder};
 use bytes::{BufMut, Bytes, BytesMut};
+use digest::Digest;
 use hkdf::Hkdf;
 use log::debug;
 use sha2::Sha256;
@@ -18,9 +19,9 @@ use crate::crypto::{
 use crate::{
     composed::{PlainSessionKey, RawSessionKey},
     crypto::{
-        aead::AeadAlgorithm, checksum, dsa, ecc_curve::ECCCurve, ecdh, ecdsa, ed25519, ed448,
-        eddsa_legacy, elgamal, public_key::PublicKeyAlgorithm, rsa, sym::SymmetricKeyAlgorithm,
-        x25519, x448, Decryptor,
+        aead::AeadAlgorithm, checksum, checksum::simple_to_writer, dsa, ecc_curve::ECCCurve, ecdh,
+        ecdsa, ed25519, ed448, eddsa_legacy, elgamal, public_key::PublicKeyAlgorithm, rsa,
+        sym::SymmetricKeyAlgorithm, x25519, x448, Decryptor,
     },
     errors::{bail, ensure, ensure_eq, unimplemented_err, unsupported_err, Result},
     parsing_reader::BufReadParsing,
@@ -339,6 +340,20 @@ impl PlainSecretParams {
 
         match &s2k_params {
             S2kParams::Unprotected => bail!("cannot encrypt to unprotected"),
+            S2kParams::LegacyCfb { sym_alg, iv } => {
+                let key = md5::Md5::digest(passphrase);
+
+                // Encryption
+                let mut data = Vec::with_capacity(self.write_len_raw());
+                self.to_writer_raw(&mut data).expect("preallocated vector");
+
+                // add simple checksum
+                simple_to_writer(&data.clone(), &mut data).expect("write checksum");
+
+                sym_alg.encrypt_with_iv_regular(&key, iv, &mut data)?;
+
+                Ok(EncryptedSecretParams::new(data.into(), s2k_params))
+            }
             S2kParams::Cfb { sym_alg, s2k, iv } => {
                 // An implementation MUST NOT create [..] any Secret Key packet where the S2K usage
                 // octet is not AEAD (253) and the S2K Specifier Type is Argon2.

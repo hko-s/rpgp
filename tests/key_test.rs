@@ -12,7 +12,8 @@ use num_traits::ToPrimitive;
 use pgp::{
     armor,
     composed::{
-        Deserializable, DetachedSignature, PublicOrSecret, SignedPublicKey, SignedSecretKey,
+        ArmorOptions, Deserializable, DetachedSignature, PublicOrSecret, SignedPublicKey,
+        SignedSecretKey,
     },
     crypto::{
         ecdh, ecdsa::SecretKey as ECDSASecretKey, hash::HashAlgorithm,
@@ -31,7 +32,7 @@ use pgp::{
         StringToKey, Tag, Timestamp,
     },
 };
-use rand::SeedableRng;
+use rand::{Rng, SeedableRng};
 use rand_chacha::ChaChaRng;
 use rsa::traits::PublicKeyParts;
 use testresult::TestResult;
@@ -1907,4 +1908,141 @@ fn test_non_canonical_mpi_in_backsig() -> TestResult {
     }
 
     Ok(())
+}
+
+#[test]
+fn foo() {
+    let locked = "-----BEGIN PGP PRIVATE KEY BLOCK-----
+
+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
+Be4ubVrj5KjhX2PVNEJd3XZRzaXZE2aAMQ==
+=B3f6
+-----END PGP PRIVATE KEY BLOCK-----";
+
+    let mut rng = ChaChaRng::from_seed([0u8; 32]);
+
+    let pw = Password::from("password");
+
+    let (mut tsk, _) = SignedSecretKey::from_armor_single(locked.as_bytes()).expect("parse");
+
+    (&mut tsk.primary_key)
+        .remove_password(&pw)
+        .expect("remove pw");
+
+    tsk.secret_subkeys
+        .iter_mut()
+        .for_each(|subkey| subkey.key.remove_password(&pw).expect("remove pw"));
+
+    {
+        let sym_alg = SymmetricKeyAlgorithm::IDEA;
+        const IV_LEN: usize = 8;
+
+        let s2k = S2kParams::LegacyCfb {
+            iv: rng.gen::<[u8; IV_LEN]>().to_vec().into(),
+            sym_alg,
+        };
+
+        tsk.primary_key
+            .set_password_with_s2k(&pw, s2k.clone())
+            .expect("set pw");
+
+        tsk.secret_subkeys.iter_mut().for_each(|subkey| {
+            let s2k = S2kParams::LegacyCfb {
+                iv: rng.gen::<[u8; IV_LEN]>().to_vec().into(),
+                sym_alg,
+            };
+
+            subkey
+                .key
+                .set_password_with_s2k(&pw, s2k.clone())
+                .expect("set pw");
+        });
+    }
+
+    eprintln!(
+        "{}",
+        tsk.to_armored_string(ArmorOptions::default())
+            .expect("armor")
+    );
 }
