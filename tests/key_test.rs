@@ -2015,8 +2015,8 @@ Be4ubVrj5KjhX2PVNEJd3XZRzaXZE2aAMQ==
         .for_each(|subkey| subkey.key.remove_password(&pw).expect("remove pw"));
 
     {
-        let sym_alg = SymmetricKeyAlgorithm::IDEA;
-        const IV_LEN: usize = 8;
+        let sym_alg = SymmetricKeyAlgorithm::AES256;
+        const IV_LEN: usize = 16;
 
         let s2k = S2kParams::LegacyCfb {
             iv: rng.gen::<[u8; IV_LEN]>().to_vec().into(),

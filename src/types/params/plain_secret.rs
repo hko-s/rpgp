@@ -20,15 +20,15 @@ use crate::{
     composed::{PlainSessionKey, RawSessionKey},
     crypto::{
         aead::AeadAlgorithm, checksum, checksum::simple_to_writer, dsa, ecc_curve::ECCCurve, ecdh,
-        ecdsa, ed25519, ed448, eddsa_legacy, elgamal, public_key::PublicKeyAlgorithm, rsa,
-        sym::SymmetricKeyAlgorithm, x25519, x448, Decryptor,
+        ecdsa, ed25519, ed448, eddsa_legacy, elgamal, hash::HashAlgorithm,
+        public_key::PublicKeyAlgorithm, rsa, sym::SymmetricKeyAlgorithm, x25519, x448, Decryptor,
     },
     errors::{bail, ensure, ensure_eq, unimplemented_err, unsupported_err, Result},
     parsing_reader::BufReadParsing,
     ser::Serialize,
     types::{
         EcdhPublicParams, EddsaLegacyPublicParams, EncryptedSecretParams, EskType, KeyDetails,
-        KeyVersion, Mpi, PkeskBytes, PublicParams, S2kParams, StringToKey, Tag,
+        KeyVersion, Mpi, PkeskBytes, PublicParams, S2kParams, S2kUsage, StringToKey, Tag,
     },
     util::TeeWriter,
 };
@@ -341,7 +341,11 @@ impl PlainSecretParams {
         match &s2k_params {
             S2kParams::Unprotected => bail!("cannot encrypt to unprotected"),
             S2kParams::LegacyCfb { sym_alg, iv } => {
-                let key = md5::Md5::digest(passphrase);
+                let s2k = StringToKey::Simple {
+                    hash_alg: HashAlgorithm::Md5,
+                };
+
+                let key = s2k.derive_key(passphrase, sym_alg.key_size())?;
 
                 // Encryption
                 let mut data = Vec::with_capacity(self.write_len_raw());
@@ -350,7 +354,7 @@ impl PlainSecretParams {
                 // add simple checksum
                 simple_to_writer(&data.clone(), &mut data).expect("write checksum");
 
-                sym_alg.encrypt_with_iv_regular(&key, iv, &mut data)?;
+                sym_alg.encrypt_with_iv_regular(key.as_ref(), iv, &mut data)?;
 
                 Ok(EncryptedSecretParams::new(data.into(), s2k_params))
             }
